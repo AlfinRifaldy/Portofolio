@@ -220,9 +220,11 @@ export default function AdminDashboard() {
 
       const { data: existingBio } = await supabase.from("bio").select("id").limit(1).single();
       if (existingBio) {
-        await supabase.from("bio").update(bioPayload).eq("id", existingBio.id);
+        const { error: updateError } = await supabase.from("bio").update(bioPayload).eq("id", existingBio.id);
+        if (updateError) throw updateError;
       } else {
-        await supabase.from("bio").insert(bioPayload);
+        const { error: insertError } = await supabase.from("bio").insert(bioPayload);
+        if (insertError) throw insertError;
       }
 
       const listTables = [
