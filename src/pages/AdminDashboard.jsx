@@ -276,6 +276,26 @@ export default function AdminDashboard() {
     });
   };
 
+  const predefinedSkills = {
+    Frontend: ["HTML5", "CSS3", "JavaScript", "TypeScript", "React", "Next.js", "Vue.js", "Tailwind CSS", "Bootstrap", "Astro", "SASS/SCSS"],
+    Backend: ["Node.js", "Express.js", "NestJS", "PHP", "Laravel", "Python", "Django", "FastAPI", "Go (Golang)"],
+    Design: ["Figma", "UI/UX Design", "Adobe Photoshop", "Adobe Illustrator", "Wireframing", "Prototyping"],
+    Tools: ["Git", "GitHub", "Docker", "Supabase", "Firebase", "MySQL", "PostgreSQL", "MongoDB", "Redis", "Vercel"]
+  };
+
+  const handleToggleSkill = (name, category) => {
+    setPortfolio((prev) => {
+      const isSelected = (prev.skills || []).some((s) => s.name.toLowerCase() === name.toLowerCase());
+      let newSkills;
+      if (isSelected) {
+        newSkills = (prev.skills || []).filter((s) => s.name.toLowerCase() !== name.toLowerCase());
+      } else {
+        newSkills = [...(prev.skills || []), { id: "sk_" + Date.now() + Math.random().toString(36).substring(2, 7), name, category, level: 100 }];
+      }
+      return { ...prev, skills: newSkills };
+    });
+  };
+
   const handleMarkMessageRead = async (messageId) => {
     setSaveLoading(true);
     try {
@@ -539,11 +559,11 @@ export default function AdminDashboard() {
           )}
 
           {/* DYNAMIC LISTS */}
-          {activeTab !== "bio" && activeTab !== "messages" && (
+          {activeTab !== "bio" && activeTab !== "messages" && activeTab !== "skills" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-slate-900 pb-4">
                 <div>
-                  <h2 className="text-xl font-bold text-slate-100 capitalize">Kelola {activeTab === "skills" ? "Keahlian" : activeTab === "experience" ? "Pengalaman Kerja" : activeTab === "education" ? "Pendidikan" : activeTab === "projects" ? "Proyek" : "Sertifikasi"}</h2>
+                  <h2 className="text-xl font-bold text-slate-100 capitalize">Kelola {activeTab === "experience" ? "Pengalaman Kerja" : activeTab === "education" ? "Pendidikan" : activeTab === "projects" ? "Proyek" : "Sertifikasi"}</h2>
                   <p className="text-xs text-slate-400 mt-1">Tambahkan, ubah, atau hapus konten yang muncul di halaman utama.</p>
                 </div>
                 <button onClick={() => openModal("add", activeTab)} className="px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs tracking-wide uppercase transition-all shadow-md cursor-pointer flex items-center gap-1.5">
@@ -556,7 +576,6 @@ export default function AdminDashboard() {
                 <table className="w-full border-collapse text-left text-sm text-slate-300">
                   <thead className="bg-slate-950/40 text-xs font-bold text-slate-400 uppercase border-b border-slate-900">
                     <tr>
-                      {activeTab === "skills" && (<><th className="px-6 py-4">Nama Keahlian</th><th className="px-6 py-4">Persentase (%)</th><th className="px-6 py-4">Kategori</th></>)}
                       {(activeTab === "education" || activeTab === "experience") && (<><th className="px-6 py-4">Lembaga / Perusahaan</th><th className="px-6 py-4">Gelar / Peran</th><th className="px-6 py-4">Periode</th></>)}
                       {activeTab === "projects" && (<><th className="px-6 py-4">Judul Proyek</th><th className="px-6 py-4">Tags</th><th className="px-6 py-4">Link Demo</th></>)}
                       {activeTab === "certificates" && (<><th className="px-6 py-4">Nama Sertifikasi</th><th className="px-6 py-4">Penerbit</th><th className="px-6 py-4">Tanggal Terbit</th></>)}
@@ -586,17 +605,6 @@ export default function AdminDashboard() {
                         </td>
                       </tr>
                     ))}
-                    {activeTab === "skills" && portfolio.skills.map((skill) => (
-                      <tr key={skill.id} className="hover:bg-slate-900/10">
-                        <td className="px-6 py-4 font-semibold text-slate-100">{skill.name}</td>
-                        <td className="px-6 py-4 font-mono">{skill.level}%</td>
-                        <td className="px-6 py-4 text-xs font-semibold uppercase text-zinc-400">{skill.category}</td>
-                        <td className="px-6 py-4 text-right space-x-2">
-                          <button onClick={() => openModal("edit", "skills", skill)} className="text-xs text-amber-500 hover:underline cursor-pointer">Edit</button>
-                          <button onClick={() => handleDeleteItem(skill.id, "skills")} className="text-xs text-rose-400 hover:underline cursor-pointer">Hapus</button>
-                        </td>
-                      </tr>
-                    ))}
                     {activeTab === "projects" && portfolio.projects.map((proj) => (
                       <tr key={proj.id} className="hover:bg-slate-900/10">
                         <td className="px-6 py-4 font-semibold text-slate-100">{proj.title}</td>
@@ -623,11 +631,48 @@ export default function AdminDashboard() {
                 </table>
                 {((activeTab === "education" && portfolio.educations.length === 0) ||
                   (activeTab === "experience" && portfolio.experiences.length === 0) ||
-                  (activeTab === "skills" && portfolio.skills.length === 0) ||
                   (activeTab === "projects" && portfolio.projects.length === 0) ||
                   (activeTab === "certificates" && portfolio.certificates.length === 0)) && (
                   <div className="text-center py-10 text-slate-500 font-medium">Tidak ada data ditemukan. Klik &quot;Tambah Baru&quot; untuk menambahkan data.</div>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* DYNAMIC CLICKABLE SKILLS SELECTION TAB */}
+          {activeTab === "skills" && (
+            <div className="space-y-8">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-100">Kelola Keahlian (Skills)</h2>
+                  <p className="text-xs text-slate-400 mt-1">Pilih keahlian yang Anda kuasai dengan mengkliknya. Keahlian terpilih akan langsung muncul di halaman utama.</p>
+                </div>
+                <button onClick={() => savePortfolioData()} disabled={saveLoading} className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs tracking-wide uppercase transition-all shadow-md disabled:opacity-50 cursor-pointer">
+                  {saveLoading ? "Menyimpan..." : "Simpan Perubahan"}
+                </button>
+              </div>
+
+              <div className="space-y-8">
+                {Object.entries(predefinedSkills).map(([cat, list]) => (
+                  <div key={cat} className="space-y-3">
+                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">{cat}</h3>
+                    <div className="flex flex-wrap gap-2.5">
+                      {list.map((name) => {
+                        const isSelected = (portfolio.skills || []).some((s) => s.name.toLowerCase() === name.toLowerCase());
+                        return (
+                          <button
+                            key={name}
+                            type="button"
+                            onClick={() => handleToggleSkill(name, cat)}
+                            className={`px-4 py-2.5 rounded-xl text-xs font-semibold tracking-wide transition-all border cursor-pointer ${isSelected ? "bg-amber-500/10 border-amber-500/40 text-amber-500 font-bold shadow-md shadow-amber-500/5" : "bg-slate-950/40 border-slate-800 text-slate-400 hover:text-slate-200 hover:border-slate-700"}`}
+                          >
+                            {name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
           )}

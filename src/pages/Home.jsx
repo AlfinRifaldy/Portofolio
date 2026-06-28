@@ -169,19 +169,26 @@ export default function Home() {
               <h2 className="text-3xl sm:text-4xl font-bold text-white mt-2">Teknologi & Penguasaan</h2>
               <div className="section-line mx-auto mt-4"></div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
-              {skills.map((skill) => (
-                <div key={skill.id} className="card p-5 space-y-3 hover:border-amber-500/20">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[13px] font-semibold text-slate-200">{skill.name}</span>
-                    <span className="text-xs font-mono font-bold text-amber-500">{skill.level}%</span>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto text-left">
+              {["Frontend", "Backend", "Design", "Tools"].map((cat) => {
+                const catSkills = skills.filter((s) => (s.category || "").toLowerCase() === cat.toLowerCase());
+                if (catSkills.length === 0) return null;
+                return (
+                  <div key={cat} className="card p-6 space-y-4 bg-slate-900/40 backdrop-blur-md hover:border-amber-500/20 transition-all duration-300">
+                    <h3 className="text-xs font-bold text-amber-500 uppercase tracking-widest flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      {cat}
+                    </h3>
+                    <div className="flex flex-wrap gap-2.5">
+                      {catSkills.map((skill) => (
+                        <span key={skill.id} className="px-3.5 py-2 rounded-xl bg-slate-950/60 border border-slate-800 text-slate-300 hover:text-white hover:border-slate-750 transition-all text-xs font-medium tracking-wide">
+                          {skill.name}
+                        </span>
+                      ))}
+                    </div>
                   </div>
-                  <div className="w-full h-1.5 bg-slate-900 rounded-full overflow-hidden">
-                    <div className="h-full bg-gradient-to-r from-amber-600 to-amber-400 rounded-full" style={{ width: `${skill.level}%` }}></div>
-                  </div>
-                  <span className="text-[9px] uppercase tracking-widest font-bold text-slate-600">{skill.category}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </section>
