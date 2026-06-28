@@ -12,12 +12,13 @@ export default function AdminDashboard() {
   const [session, setSession] = useState(null);
 
   const [portfolio, setPortfolio] = useState({
-    bio: { name: "", role: "", about: "", avatar: "", cvUrl: "", socials: { github: "", linkedin: "", instagram: "", email: "" } },
+    bio: { name: "", role: "", about: "", avatar: "", cvUrl: "", about_title: "", about_subtitle: "", stats: [], socials: { github: "", linkedin: "", instagram: "", email: "" } },
     educations: [],
     experiences: [],
     skills: [],
     projects: [],
-    certificates: []
+    certificates: [],
+    messages: []
   });
 
   const [modalOpen, setModalOpen] = useState(false);
@@ -49,18 +50,37 @@ export default function AdminDashboard() {
 
   const fetchPortfolioData = async () => {
     try {
-      const [bioRes, eduRes, expRes, skillRes, projRes, certRes] = await Promise.all([
+      const [bioRes, eduRes, expRes, skillRes, projRes, certRes, msgRes] = await Promise.all([
         supabase.from("bio").select("*").limit(1).single(),
         supabase.from("educations").select("*").order("sort_order", { ascending: true }),
         supabase.from("experiences").select("*").order("sort_order", { ascending: true }),
         supabase.from("skills").select("*").order("sort_order", { ascending: true }),
         supabase.from("projects").select("*").order("sort_order", { ascending: true }),
         supabase.from("certificates").select("*").order("sort_order", { ascending: true }),
+        supabase.from("messages").select("*").order("created_at", { ascending: false }),
       ]);
 
       const bio = bioRes.data || {};
       if (bio.cv_url !== undefined) {
         bio.cvUrl = bio.cv_url;
+      }
+
+      // Default fallback stats if empty or not defined
+      if (!bio.stats || bio.stats.length === 0) {
+        bio.stats = [
+          { num: "2+", label: "Tahun Pengalaman", desc: "Web Development" },
+          { num: "10+", label: "Proyek Dirilis", desc: "End-to-End" },
+          { num: "5+", label: "Sertifikat", desc: "Kompetensi Profesional" },
+          { num: "100%", label: "Dedikasi", desc: "Pada Setiap Proyek" }
+        ];
+      }
+
+      if (!bio.about_title) {
+        bio.about_title = "Merancang Produk Digital <br />Dengan <span class=\"text-amber-500\">Standar Tinggi</span>";
+      }
+
+      if (!bio.about_subtitle) {
+        bio.about_subtitle = "Saya menggabungkan keterampilan backend engineering dengan kepekaan desain frontend untuk membangun produk yang tidak hanya fungsional, tetapi juga memberikan pengalaman pengguna yang luar biasa.";
       }
 
       // Auto-koreksi jika data sosial masih berisi nilai placeholder/dummy
@@ -104,6 +124,7 @@ export default function AdminDashboard() {
         skills: skillRes.data || [],
         projects: projRes.data || [],
         certificates: certRes.data || [],
+        messages: msgRes.data || [],
       });
     } catch (err) {
       setErrorMsg("Gagal memuat data portofolio.");
@@ -111,7 +132,6 @@ export default function AdminDashboard() {
       setLoading(false);
     }
   };
-
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -192,6 +212,9 @@ export default function AdminDashboard() {
         avatar: data.bio.avatar,
         cv_url: data.bio.cvUrl || "",
         socials: data.bio.socials || {},
+        about_title: data.bio.about_title || "",
+        about_subtitle: data.bio.about_subtitle || "",
+        stats: data.bio.stats || [],
         updated_at: new Date().toISOString(),
       };
 
@@ -238,6 +261,45 @@ export default function AdminDashboard() {
       fetchPortfolioData();
     } catch (err) {
       setErrorMsg(err.message || "Gagal menyimpan perubahan.");
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleStatChange = (index, field, value) => {
+    setPortfolio((prev) => {
+      const newStats = [...(prev.bio.stats || [])];
+      newStats[index] = { ...newStats[index], [field]: value };
+      return { ...prev, bio: { ...prev.bio, stats: newStats } };
+    });
+  };
+
+  const handleMarkMessageRead = async (messageId) => {
+    setSaveLoading(true);
+    try {
+      const { error } = await supabase.from("messages").update({ is_read: true }).eq("id", messageId);
+      if (error) throw error;
+      setSuccessMsg("Pesan ditandai sebagai dibaca!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+      fetchPortfolioData();
+    } catch (err) {
+      setErrorMsg(err.message || "Gagal menandai pesan.");
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
+  const handleDeleteMessage = async (messageId) => {
+    if (!confirm("Apakah Anda yakin ingin menghapus pesan ini?")) return;
+    setSaveLoading(true);
+    try {
+      const { error } = await supabase.from("messages").delete().eq("id", messageId);
+      if (error) throw error;
+      setSuccessMsg("Pesan berhasil dihapus!");
+      setTimeout(() => setSuccessMsg(""), 3000);
+      fetchPortfolioData();
+    } catch (err) {
+      setErrorMsg(err.message || "Gagal menghapus pesan.");
     } finally {
       setSaveLoading(false);
     }
@@ -386,7 +448,8 @@ export default function AdminDashboard() {
             { id: "experience", name: "Pengalaman Kerja", icon: "💼" },
             { id: "skills", name: "Keahlian", icon: "⚡" },
             { id: "projects", name: "Proyek", icon: "📂" },
-            { id: "certificates", name: "Sertifikasi", icon: "📜" }
+            { id: "certificates", name: "Sertifikasi", icon: "📜" },
+            { id: "messages", name: "Pesan Masuk", icon: "✉️" }
           ].map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all cursor-pointer ${activeTab === tab.id ? "bg-amber-500/10 text-amber-500 border-l-4 border-amber-500 font-bold" : "text-slate-400 hover:text-slate-200 hover:bg-slate-900/30"}`}>
               <span>{tab.icon}</span>{tab.name}
@@ -411,16 +474,18 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-6">
                   <h3 className="text-sm font-bold text-amber-500 uppercase tracking-wider">Detail Personal</h3>
-                  <div className="space-y-2"><label className="text-xs font-semibold text-slate-455">Nama Lengkap</label><input type="text" value={portfolio.bio.name} onChange={(e) => handleBioChange(e, "name")} className={inputCls} /></div>
-                  <div className="space-y-2"><label className="text-xs font-semibold text-slate-455">Role / Pekerjaan</label><input type="text" value={portfolio.bio.role} onChange={(e) => handleBioChange(e, "role")} className={inputCls} /></div>
-                  <div className="space-y-2"><label className="text-xs font-semibold text-slate-455">Tentang Saya</label><textarea rows="4" value={portfolio.bio.about} onChange={(e) => handleBioChange(e, "about")} className={`${inputCls} resize-none`}></textarea></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold text-slate-400">Nama Lengkap</label><input type="text" value={portfolio.bio.name} onChange={(e) => handleBioChange(e, "name")} className={inputCls} /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold text-slate-400">Role / Pekerjaan</label><input type="text" value={portfolio.bio.role} onChange={(e) => handleBioChange(e, "role")} className={inputCls} /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold text-slate-400">Tentang Saya (Paragraf 1)</label><textarea rows="4" value={portfolio.bio.about} onChange={(e) => handleBioChange(e, "about")} className={`${inputCls} resize-none`}></textarea></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold text-slate-400">Judul Bagian Tentang (HTML diizinkan)</label><input type="text" value={portfolio.bio.about_title || ""} onChange={(e) => handleBioChange(e, "about_title")} className={inputCls} /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold text-slate-400">Deskripsi Tentang (Paragraf 2)</label><textarea rows="3" value={portfolio.bio.about_subtitle || ""} onChange={(e) => handleBioChange(e, "about_subtitle")} className={`${inputCls} resize-none`}></textarea></div>
                 </div>
                 <div className="space-y-6">
                   <h3 className="text-sm font-bold text-amber-500 uppercase tracking-wider">Aset & Sosial Media</h3>
                   
                   {/* UPLOADER FOR AVATAR */}
                   <div className="space-y-2">
-                    <label className="text-xs font-semibold text-slate-455">Foto Profil / Avatar</label>
+                    <label className="text-xs font-semibold text-slate-400">Foto Profil / Avatar</label>
                     <div className="flex gap-4 items-center mb-2">
                       {portfolio.bio.avatar && (
                         <img src={portfolio.bio.avatar} alt="Preview" className="w-12 h-12 rounded-xl object-cover border border-slate-800" />
@@ -435,20 +500,44 @@ export default function AdminDashboard() {
                     <input type="text" value={portfolio.bio.avatar} onChange={(e) => handleBioChange(e, "avatar")} className={inputClsMono} placeholder="Atau tempel link URL foto..." />
                   </div>
 
-                  <div className="space-y-2"><label className="text-xs font-semibold text-slate-455">CV Download URL</label><input type="text" value={portfolio.bio.cvUrl} onChange={(e) => handleBioChange(e, "cvUrl")} className={inputClsMono} /></div>
+                  <div className="space-y-2"><label className="text-xs font-semibold text-slate-400">CV Download URL</label><input type="text" value={portfolio.bio.cvUrl} onChange={(e) => handleBioChange(e, "cvUrl")} className={inputClsMono} /></div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2"><label className="text-xs font-semibold text-slate-455">GitHub</label><input type="text" value={portfolio.bio.socials.github} onChange={(e) => handleBioChange(e, "socials", "github")} className={inputClsMono} /></div>
-                    <div className="space-y-2"><label className="text-xs font-semibold text-slate-455">LinkedIn</label><input type="text" value={portfolio.bio.socials.linkedin} onChange={(e) => handleBioChange(e, "socials", "linkedin")} className={inputClsMono} /></div>
-                    <div className="space-y-2"><label className="text-xs font-semibold text-slate-455">Instagram</label><input type="text" value={portfolio.bio.socials.instagram} onChange={(e) => handleBioChange(e, "socials", "instagram")} className={inputClsMono} /></div>
-                    <div className="space-y-2"><label className="text-xs font-semibold text-slate-455">Email</label><input type="email" value={portfolio.bio.socials.email} onChange={(e) => handleBioChange(e, "socials", "email")} className={inputCls} /></div>
+                    <div className="space-y-2"><label className="text-xs font-semibold text-slate-400">GitHub</label><input type="text" value={portfolio.bio.socials.github} onChange={(e) => handleBioChange(e, "socials", "github")} className={inputClsMono} /></div>
+                    <div className="space-y-2"><label className="text-xs font-semibold text-slate-400">LinkedIn</label><input type="text" value={portfolio.bio.socials.linkedin} onChange={(e) => handleBioChange(e, "socials", "linkedin")} className={inputClsMono} /></div>
+                    <div className="space-y-2"><label className="text-xs font-semibold text-slate-400">Instagram</label><input type="text" value={portfolio.bio.socials.instagram} onChange={(e) => handleBioChange(e, "socials", "instagram")} className={inputClsMono} /></div>
+                    <div className="space-y-2"><label className="text-xs font-semibold text-slate-400">Email</label><input type="email" value={portfolio.bio.socials.email} onChange={(e) => handleBioChange(e, "socials", "email")} className={inputCls} /></div>
                   </div>
+                </div>
+              </div>
+
+              {/* STATS SECTION */}
+              <div className="border-t border-slate-900 pt-8 mt-6">
+                <h3 className="text-sm font-bold text-amber-500 uppercase tracking-wider mb-4">Statistik Portofolio (4 Kartu)</h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {(portfolio.bio.stats || []).map((stat, i) => (
+                    <div key={i} className="p-4 rounded-xl border border-slate-800 bg-slate-950/40 space-y-3">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block font-mono">Kartu {i + 1}</span>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-400 font-semibold uppercase">Angka (misal: 2+)</label>
+                        <input type="text" value={stat.num || ""} onChange={(e) => handleStatChange(i, "num", e.target.value)} className={inputCls} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-400 font-semibold uppercase">Label (misal: Tahun Pengalaman)</label>
+                        <input type="text" value={stat.label || ""} onChange={(e) => handleStatChange(i, "label", e.target.value)} className={inputCls} />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-[10px] text-slate-400 font-semibold uppercase">Sub-label (misal: Web Development)</label>
+                        <input type="text" value={stat.desc || ""} onChange={(e) => handleStatChange(i, "desc", e.target.value)} className={inputCls} />
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
           )}
 
           {/* DYNAMIC LISTS */}
-          {activeTab !== "bio" && (
+          {activeTab !== "bio" && activeTab !== "messages" && (
             <div className="space-y-6">
               <div className="flex items-center justify-between border-b border-slate-900 pb-4">
                 <div>
@@ -536,6 +625,75 @@ export default function AdminDashboard() {
                   (activeTab === "projects" && portfolio.projects.length === 0) ||
                   (activeTab === "certificates" && portfolio.certificates.length === 0)) && (
                   <div className="text-center py-10 text-slate-500 font-medium">Tidak ada data ditemukan. Klik &quot;Tambah Baru&quot; untuk menambahkan data.</div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* MESSAGES INBOX TAB */}
+          {activeTab === "messages" && (
+            <div className="space-y-6">
+              <div className="flex items-center justify-between border-b border-slate-900 pb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-100">Pesan Masuk (Inbox)</h2>
+                  <p className="text-xs text-slate-400 mt-1">Membaca pesan yang dikirimkan oleh pengunjung melalui formulir kontak.</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {portfolio.messages && portfolio.messages.length > 0 ? (
+                  portfolio.messages.map((msg) => (
+                    <div key={msg.id} className={`card p-6 rounded-2xl border transition-all ${msg.is_read ? "border-slate-800 bg-slate-900/20 opacity-80" : "border-amber-500/20 bg-slate-900/50 shadow-md shadow-amber-500/5"}`}>
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2.5">
+                            <span className="font-bold text-slate-100 text-sm">{msg.name}</span>
+                            <span className="text-xs font-mono text-slate-400">&lt;{msg.email}&gt;</span>
+                            {!msg.is_read && (
+                              <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 text-[9px] font-bold uppercase tracking-wider">
+                                Baru
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-xs text-slate-500 font-medium">
+                            Diterima: {new Date(msg.created_at).toLocaleString('id-ID')}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {!msg.is_read && (
+                            <button
+                              type="button"
+                              onClick={() => handleMarkMessageRead(msg.id)}
+                              disabled={saveLoading}
+                              className="px-3.5 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500 text-amber-550 hover:text-slate-950 border border-amber-500/20 text-[11px] font-bold transition-all cursor-pointer"
+                            >
+                              Tandai Dibaca
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteMessage(msg.id)}
+                            disabled={saveLoading}
+                            className="px-3.5 py-1.5 rounded-lg bg-slate-850 hover:bg-red-500/10 text-slate-450 hover:text-red-400 border border-slate-800 hover:border-red-500/20 text-[11px] font-bold transition-all cursor-pointer"
+                          >
+                            Hapus
+                          </button>
+                        </div>
+                      </div>
+                      <div className="space-y-2 border-t border-slate-800/60 pt-4">
+                        <h4 className="text-[13px] font-semibold text-slate-300">
+                          Subjek: <span className="text-slate-200">{msg.subject}</span>
+                        </h4>
+                        <p className="text-xs text-slate-400 leading-relaxed whitespace-pre-wrap">
+                          {msg.message}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-14 card rounded-2xl text-slate-500 font-medium">
+                    Tidak ada pesan masuk.
+                  </div>
                 )}
               </div>
             </div>

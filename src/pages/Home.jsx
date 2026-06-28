@@ -127,12 +127,12 @@ export default function Home() {
         <section id="about" className="fp-section grain">
           <div className="max-w-7xl mx-auto px-6 w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center relative z-10">
             <div className="grid grid-cols-2 gap-5">
-              {[
+              {(bio.stats || [
                 { num: "2+", label: "Tahun Pengalaman", desc: "Web Development" },
                 { num: "10+", label: "Proyek Dirilis", desc: "End-to-End" },
                 { num: "5+", label: "Sertifikat", desc: "Kompetensi Profesional" },
                 { num: "100%", label: "Dedikasi", desc: "Pada Setiap Proyek" },
-              ].map((s, i) => (
+              ]).map((s, i) => (
                 <div key={i} className="card p-6 text-center group">
                   <span className="text-3xl sm:text-4xl font-extrabold text-amber-500 block">{s.num}</span>
                   <span className="text-sm font-semibold text-slate-300 block mt-2">{s.label}</span>
@@ -144,13 +144,12 @@ export default function Home() {
             <div className="space-y-6">
               <div>
                 <span className="text-[11px] font-bold text-amber-500 uppercase tracking-widest">Tentang Saya</span>
-                <h2 className="text-3xl sm:text-4xl font-bold text-white mt-2 leading-tight">
-                  Merancang Produk Digital <br />Dengan <span className="text-amber-500">Standar Tinggi</span>
+                <h2 className="text-3xl sm:text-4xl font-bold text-white mt-2 leading-tight" dangerouslySetInnerHTML={{ __html: bio.about_title || "Merancang Produk Digital <br />Dengan <span class=\"text-amber-500\">Standar Tinggi</span>" }}>
                 </h2>
               </div>
               <p className="text-slate-400 text-[15px] leading-relaxed">{bio.about}</p>
               <p className="text-slate-400 text-[15px] leading-relaxed">
-                Saya menggabungkan keterampilan backend engineering dengan kepekaan desain frontend untuk membangun produk yang tidak hanya fungsional, tetapi juga memberikan pengalaman pengguna yang luar biasa.
+                {bio.about_subtitle || "Saya menggabungkan keterampilan backend engineering dengan kepekaan desain frontend untuk membangun produk yang tidak hanya fungsional, tetapi juga memberikan pengalaman pengguna yang luar biasa."}
               </p>
               <div className="flex items-center gap-5 pt-2">
                 <span className="text-slate-600 text-xs font-semibold">Connect →</span>
