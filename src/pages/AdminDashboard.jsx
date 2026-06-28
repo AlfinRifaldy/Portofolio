@@ -2,6 +2,17 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
 
+const generateUUID = () => {
+  if (typeof self !== "undefined" && self.crypto && self.crypto.randomUUID) {
+    return self.crypto.randomUUID();
+  }
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === "x" ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("bio");
@@ -242,7 +253,7 @@ export default function AdminDashboard() {
           const rows = items.map((item, index) => {
             const row = { ...item, sort_order: index };
             if (!row.id || typeof row.id !== "string" || !row.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
-              delete row.id;
+              row.id = generateUUID();
             }
             if (table === "projects" && row.tags && typeof row.tags === "string") {
               row.tags = row.tags.split(",").map(t => t.trim()).filter(Boolean);
@@ -290,7 +301,7 @@ export default function AdminDashboard() {
       if (isSelected) {
         newSkills = (prev.skills || []).filter((s) => s.name.toLowerCase() !== name.toLowerCase());
       } else {
-        newSkills = [...(prev.skills || []), { id: "sk_" + Date.now() + Math.random().toString(36).substring(2, 7), name, category, level: 100 }];
+        newSkills = [...(prev.skills || []), { id: generateUUID(), name, category, level: 100 }];
       }
       return { ...prev, skills: newSkills };
     });
@@ -367,7 +378,7 @@ export default function AdminDashboard() {
 
     let updatedList = [...portfolio[key]];
     if (modalMode === "add") {
-      const newItem = { ...formData, id: activeTab.slice(0, 3) + Date.now() };
+      const newItem = { ...formData, id: generateUUID() };
       if (activeTab === "projects" && typeof newItem.tags === "string") {
         newItem.tags = newItem.tags.split(",").map(t => t.trim()).filter(Boolean);
       }
