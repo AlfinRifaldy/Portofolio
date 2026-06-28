@@ -241,7 +241,7 @@ export default function AdminDashboard() {
         if (items.length > 0) {
           const rows = items.map((item, index) => {
             const row = { ...item, sort_order: index };
-            if (row.id && !row.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
+            if (!row.id || typeof row.id !== "string" || !row.id.match(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i)) {
               delete row.id;
             }
             if (table === "projects" && row.tags && typeof row.tags === "string") {
